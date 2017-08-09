@@ -1,0 +1,58 @@
+---
+layout: post
+title:  "Numerical Approximation to the Heat Equation"
+author: "tetrisd"
+---
+The heat equation is a well-known partial differential equation that models the diffusion of heat. It's a specific form of the diffusion equation:
+
+$$ \frac{\partial u}{\partial t} = \alpha \nabla^2  u$$
+
+where $u$ is the temperature function, $\nabla^2$ is the Laplace operator, and $\alpha$ is the thermal diffusivity. More precisely, $u: (\mathbf{R}^n, \mathbf{R}) \rightarrow \mathbf{R}$, where the codomain describes the temperature and the domain is a 2-tuple describing $n$-dimensional space and time. For example, consider the 2D heat equation:
+
+$$ \frac{\partial u}{\partial t} = \alpha \left( \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2} \right) $$
+
+In video games--particularly simulation-type ones--this equation can be used as a basic building block toward more complex phenomena. For example, it can be combined with stochastic functions to crudely model radioactivity.
+
+Given unforced inputs, analytically solving such an equation is generally intractable. However, approximation is straightforward: finite-difference methods work well across most problem sets, where the idea is to discretize each derivative. Since there are second-order derivatives here, the simplest would be the second-order central difference:
+
+$$ \frac{\partial^2 u(\vec{p}^{\,}, t)}{\partial {\vec{p}^{\,}_i}^2} = \frac{u(\vec{p}^{\,} + \delta \textbf{e}_i, t) + u(\vec{p}^{\,} - \delta \textbf{e}_i, t) - 2u(\vec{p}^{\,}, t)}{\delta^2} + O(\delta^2)$$
+
+where $\vec{p}^{\,}$ is the point in $n$ dimensions, $t$ is time, $\textbf{e}_i$ is a vector with 1 at the $i$th index and 0 everywhere else, and $\delta$ is size of discretization. For example, consider the "expanded" second-order central difference to the 2D heat equation:
+
+$$ \frac{\partial^2 u(x, y, t)}{\partial x^2} \approx \frac{u(x + \Delta x, y, t) + u(x - \Delta x, y, t) - 2u(x, y, t)}{\delta^2}$$
+
+$$ \frac{\partial^2 u(x, y, t)}{\partial y^2} \approx \frac{u(x, y + \Delta y, t) + u(x, y - \Delta y, t) - 2u(x, y, t)}{\delta^2}$$
+
+We will now derive the central difference using Taylor series expansions:
+
+Consider $u(\vec{p}^{\,} + \delta \textbf{e}_i, t) + u(\vec{p}^{\,} - \delta \textbf{e}_i, t)$:
+
+$$ \begin{align} u(\vec{p}^{\,} + \delta \textbf{e}_i, t) + u(\vec{p}^{\,} - \delta \textbf{e}_i, t) &amp;= \left(u_t + \delta \frac{\partial u}{\partial \vec{p}^{\,}_i} + \frac{\delta^2}{2} \frac{\partial^2 u}{\partial {\vec{p}^{\,}_i}^2} \right) + \left(u_t - \delta \frac{\partial u}{\partial \vec{p}^{\,}_i} + \frac{\delta^2}{2} \frac{\partial^2 u}{\partial {\vec{p}^{\,}_i}^2} \right) + O(\delta^4) \\ &amp;= 2u(\vec{p}^{\,}, t) + \delta^2 \frac{\partial^2 u}{\partial {\vec{p}^{\,}_i}^2} + O(\delta^4)\end{align}$$
+
+Note that the $O(\delta^3)$ term was cancelled out.
+
+$$ \therefore \frac{\partial^2 u(\vec{p}^{\,}, t)}{\partial {\vec{p}^{\,}_i}^2} = \frac{u(\vec{p}^{\,} + \delta \textbf{e}_i, t) + u(\vec{p}^{\,} - \delta \textbf{e}_i, t) - 2u(\vec{p}^{\,}, t)}{\delta^2} + O(\delta^2)$$
+
+With numerical approximation
+
+$$u_{ij} = \frac{u(\vec{p}^{\,} + \delta \textbf{e}_i, t) + u(\vec{p}^{\,} - \delta \textbf{e}_i, t) - 2u(\vec{p}^{\,}, t)}{\delta^2} $$
+
+We drop off the $O(\delta^2)$ error to obtain the numerical solution $u_{ij}$, the approximation to the second derivative at the $i$th coordinate at time $j$. Positional information has been omitted for brevity. The final solution can then be approximated using
+
+$$ U_{j+1} = U_j + \Delta t \left(\alpha \Sigma_{i=1}^n u_{ij}\right)$$
+
+where $U_j$ is the approximation to the temperature at time $j$ and $n$ is the number of dimensions.
+
+An example would explain everything better. Consider again the 2D heat equation:
+
+$$ \frac{\partial u}{\partial t} = \alpha \left( \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2} \right) $$
+
+And its discrete counterpart
+
+$$ \frac{\Delta u_j}{\Delta t} = \alpha \left(u_{1j} + u_{2j}\right) $$
+
+The final solution would be
+
+$$ U_{j+1} = U_j + \Delta t\left(\alpha \left(u_{1j} + u_{2j}\right)\right)$$
+
+It should be noted that large values of $\alpha$ and $\Delta t$ lead to instability. Empirically, $\alpha \times \Delta t \lt 0.25$ works well.

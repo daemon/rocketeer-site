@@ -1,0 +1,26 @@
+# Permalinks
+permalink:      /:year-:month-:day/:title.html
+
+# Setup
+title:          "Rocketeer"
+paginate:       5
+baseurl:        ""
+url:            "http://rocketeer.net"
+
+# Assets
+sass:
+  sass_dir:     _sass
+  style:        :compressed
+
+# Build settings
+markdown:       kramdown
+
+# About
+author:
+  name:         tetrisdaemon
+  email:        0x8badc0de@gmail.com
+  url:          http://github.com/daemon
+
+# Gems
+gems:
+  - jekyll-paginate

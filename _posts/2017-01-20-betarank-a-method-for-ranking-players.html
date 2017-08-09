@@ -1,0 +1,86 @@
+---
+layout: post
+author: tetrisd
+title: BetaRank, A Method for Ranking Players
+---
+Rating systems like Elo and TrueSkill$^\text{TM}$ have been developed to assess the ranking of players in competitive games like chess and Xbox Live$^\text{TM}$, respectively. I've developed another such system, BetaRank, that endeavours to do the same, with the notable difference that the ranking statistic is intuitive and easy to understand. I describe the algorithm, examine its benefits and drawbacks, apply it to obtained data, and discuss the computational challenges.
+
+<h2>Introduction</h2>
+
+Rating systems assign numeric ratings to every player so that higher ratings correspond to higher skill levels. However, these quantities are generally difficult to interpret without much study and prior experience. Under FIDE's Elo rankings of chess players,  Magnus Carlsen has a rating of 2853: it is difficult to determine what this quantity by itself means. But when we compare Carlsen to another player like Lenier Perez with his rating of 2752, we can then deduce that the 101-point difference shows that Carlsen has a win probability of 65% against Perez.
+<br><br>
+Such is the basis for a <i>relative</i> skill level ranking system: only under relativity do the ratings have meaning. BetaRank instead assigns the <i>expected win probability</i> (under the assumptions of the model) as the rating to each player, so the rating reflects the player's absolute skill level. 
+<br><br>
+BetaRank also considers a multiagent system where many players can participate in defeating one player, as in what TrueSkill was designed for. Unlike Elo, which was originally designed for chess, it can distribute rewards across a team of players.
+
+<h2>Methodology</h2>
+
+Consider the problem of ranking players $\{p_1, \dots, p_n\}$ given that $p_i$ has $k_{ij}$ wins and $d_{ij}$ losses against $p_j, i \neq j$. We can naively order them by their total win/loss ratios or, equivalently, their expected probabilities of winning, $$\bar{w_i} = \frac{1}{n}\sum^n_{\substack{j=1 \\ j \neq i}} \frac{k_{ij}}{k_{ij} + d_{ij}}$$ However, this method fails to capture the uncertainty of the probabilities and makes invalid assumptions. We instead use the Bayesian beta-binomial model to model match outcomes.
+<h3>Capturing uncertainty</h3>
+Suppose we rank $p_1$, $p_2$ where $p_1$ has $k_{12} = 8, d_{12} = 2$ and $p_2$ has $k_{21} = 79, d_{21} = 21$. Although $p_1$ has a higher win-rate than $p_2$ does, we have more confidence that $p_2$ can perform better than $p_1$ can, since we have more data from $p_2$. We need a way to factor in this uncertainty.
+<br><br>
+Define $W_{ij} = $ the win-rate of $p_i$ against $p_j$, where $W_{ij} \thicksim \text{BETA}(k_{ij}, d_{ij})$. The one-sided credible interval $P(W_{ij} < c_{ij}) = \alpha,$ where $0 < \alpha < 0.5$, can then be calculated. That is, $\alpha100$% of the estimate samples for $W_{ij}$ will be below $c_{ij}$. Therefore, we can reasonably use $c_{ij}$ as the win probability for $p_i$ against $p_j$: without enough data, a player has a vastly underestimated win-rate, since the system is unconfident in their ability.
+
+In other words, we intuitively replace the quantity $\frac{k_{ij}}{k_{ij} + d_{ij}}$ with $c_{ij}$ to factor in uncertainty. Then $\bar{w}_i$ becomes
+$$
+\begin{equation}r_{i} = \frac{1}{n}\sum^n_{\substack{j=1\\ j \neq i}}c_{ij}\label{rating-eq}\end{equation}
+$$ where $r_i$ is said to be the \textbf{rating} of $p_i$. In our contrived example, $r_1 = 0.57$ and $r_2 = 0.72$ for $\alpha = 0.25$, reflecting our belief that $p_2$ can probably outperform $p_1$.
+\newpage
+<h3>Updating rankings</h3>
+We have assumed a prior of $\text{BETA}(k, d)$ and we need to consider additional information $k'$ wins and $d'$ losses. Naturally, this additional information follows $\text{BIN}(k' + d', p)$ if we regard each match outcome as a coin flip.
+<br><br>
+Given a binomial likelihood $\text{BIN}(n, p)$ and beta prior $\text{BETA}(\alpha, \beta)$, the posterior distribution follows $\text{BETA}(\alpha + x, \beta + (n - x))$.
+
+Then, for our study, we need only to add $k'$ and $d'$ to the old parameters, giving the following \textbf{update equation}:
+$$\begin{equation}W_{ij} := \text{BETA}(k + k', d + d')\end{equation}$$
+
+At the outset, $W_{ij}$ is initialized to Jeffrey's prior for binomial likelihood:
+$$W_{ij} := \text{BETA}(1/2, 1/2)$$
+<h3>Inference from partial data</h3>
+In a large population of players, it is unreasonable to expect that every player has played against one another, but we can probably infer at least some of the missing values. That is, consider $p_1$, $p_2$, $p_3$ with $c_{12} = 2/3$, $c_{23} = 1/2$. Then $c_{13}$ is the missing value we wish to infer.
+
+The intuition behind the inference is that we can claim that $c_{12}$ implies that $p_1$ is twice as good as $p_2$ and $c_{23}$ implies that $p_2$ is as good as $p_3$; therefore, $p_1$ is twice as good as $p_3$, so $c_{13} = 2/3$.
+
+Formally, given $c_{ij}$ and $c_{jk}$, let the ratio of skill between $i$ and $k$ be $$\lambda_{ik} = \frac{c_{ij}}{1 - c_{ij}} \times \frac{c_{jk}}{1 - c_{jk}}$$
+Thus $$c_{ik} = \frac{1}{\frac{1}{\lambda_{ik}} + 1}$$
+
+If there are multiple $j$ where $c_{ij}$ and $c_{jk}$ exist, the mean of the estimates is taken to be $c_{ik}$. Algorithmically, the process of inferring skill corresponds to a depth-first search with $n$ levels on the player graph. We choose $n = 1$ and show that, under empirical data, this inference is justified.
+
+It's clear that there may still be unobserved values after this process. For those values we simply leave them as the initial values.
+<h3>Rewarding multiple players</h3>
+Consider a single match outcome: suppose $p_1$ wins against $p_3$ with the aid of $p_2$. Let $\omega_{ij}$ be the percentage of the win that $p_i$ is responsible for $p_j$'s loss, so $\sum_{i = 1}^n \omega_{ij} = 1$. That is, if $p_1$ and $p_2$ are responsible for 80% and 20% of $p_3$'s loss, respectively, then $\omega_{13} = 0.8$ and $\omega_{23} = 0.2$. Then our update equation becomes
+$$\begin{equation}W_{ij} := \text{BETA}(k + \omega_{ij}, d)\end{equation}$$ for all $p_i$ involved in the match.
+
+Note that interpretations of $\omega_{ij}$ are game dependent. In strategy games, $\omega_{ij}$ can be set as the percentage of objective points scored by $p_i$ against $p_j$. In our study, we take $\omega_{ij}$ as the percentage of damage $p_i$ has dealt to $p_j$ in that round.
+
+<h3>Skill decay over time</h3>
+We can optionally give fresh wins more weight than older wins as time passes, which makes ratings more malleable. Equivalently, we can choose a decay parameter $\gamma$, where $0 < \gamma < 1$, and periodically set $W_{ij} := \text{BETA}(\text{max}\{\gamma k, 1/2\}, \text{max}\{\gamma d, 1/2\})$. Due to the short length of our study, we have disregarded skill decay, but we believe that $\gamma = 0.98$ and a period of 24 hours work well.
+
+<h2>Discussion</h2>
+The results show that the inference process is surprisingly accurate; however, its coverage could still be improved, since we've used only a 1-level depth-first search on the player graph. Future research could include determining a more accurate model for $n > 1$ depth-first search, which would result in a greater reduction of unobserved values.
+
+BetaRank is computationally hard as well, with memory storage scaling in $\Theta(n^2)$ and worst-case running time in $\Theta(n^2)$, where $n$ is the number of players. It's clear that for a large number of players, it would become unacceptably slow to rank players. Future research should include developing a Monte Carlo algorithm to compute an approximate rating for each player.
+
+<h2>References</h2>
+{% highlight text %}
+Elo(1978)
+Elo, A. E. (1978).
+The Rating of Chess Players, Past and Present.
+New York: Arco Pub.
+
+Herbrich, Minka, & Graepel(2007)
+Herbrich, R., Minka T., & Graepel T. (2007).
+Advances in Neural Information Processing Systems 20.
+Cambridge, MA: The MIT Press.
+
+Kochenderfer(2015)]
+Kochenderfer, M. J. (2015).
+Decision making under uncertainty: Theory and application.
+Cambridge, MA: The MIT Press.
+
+Navarro & Perfors(n.d.)
+Navarro, D., & Perfors, A. (n.d.). 
+An introduction to the Beta-Binomial model. 
+Retrieved November 24, 2016
+{% endhighlight %}
+

@@ -1,0 +1,85 @@
+---
+layout: post
+author: tetrisd
+title: Introduction to GMRES
+---
+Solving $Ax=b$ is no trivial task. Given large or ill-conditioned matrices, all direct methods are usually intractable in practice. Even then, many iterative methods fail to converge for matrices that don't satisfy problem constraints; for example, the entire class of stationary iterative methods (the prototypical example being the Jacobi method) requires $A$ to be either diagonally dominant or symmetric positive-definite. We seek an iterative method that still converges when $A$ doesn't satisfy certain conditions, namely symmetric, positive-definite, or diagonally dominant.
+<br><br>
+Fundamental concepts are first outlined before the algorithm, generalized minimal residual method (GMRES), is introduced.
+<h2>Krylov Subspace</h2>
+Consider $K^{(n)}(A, b) = (b \hspace{4mm} Ab \hspace{4mm} A^2b \hspace{3mm} \cdots \hspace{3mm} A^{n-1}b)$. $K^{(n)}(A, b)$ is said to be the $n$th-order <em>Krylov matrix </em>of $(A, b)$ with the respective <em>Krylov subspace  </em>$\mathcal{K}^{(n)}(A, b) = \text{col}(K^{(n)}(A, b))$, the column space of the Krylov matrix. A few comments are in order:
+<ul>
+        <li>By the properties of power iteration, we expect $A^nb$ to converge to the largest eigenvector if $A$ has eigenvalues distinct in magnitude.</li>
+        <li>The column vectors can't be assumed to be orthogonal to one another.</li>
+        <li>For non-singular $A_{n\times n}$, $Ax = b \implies x \in \mathcal{K}^{(n)}(A, b)$. $---(1)$</li>
+</ul>
+The last comment is surprising and deserves further exploration. We will rationalize it by examining the minimal polynomial of $A$.
+<h2>Minimal Polynomial</h2>
+For all non-singular $A$, let $P = \{p(x) \hspace{1mm} | \hspace{1mm} p(A) = 0\}$. Upon inspection, it's clear that the characteristic polynomial $p_c$ of $A \in P$. More importantly for us, the <em>minimal polynomial </em>of $A$ is the unique monic $p_0 \in P$ such that $\text{deg}(p_0) \leq \text{deg}(q), \forall q \in P$.
+$$p_0 = x+\alpha_1 x^{m - 1} + \cdots + \alpha_{m-1}$$
+Proving $(1)$ requires $\alpha_{m-1} \neq 0$. Assume $\alpha_{m-1} = 0$:
+$$\begin{align} 0 &amp;= A+\alpha_1 A^{m - 1} + \cdots + \alpha_{m-1}A^0\\
+0 &amp;= A+\alpha_1 A^{m - 1} + \cdots + \alpha_{m-2}A^1\\
+0 \times A^{-1} &amp;= A^{m-1} + \alpha_1 A^{m-2} + \cdots + \alpha_{m-2}\end{align}\\
+\implies \exists p_0\prime \in P, \text{deg}(p_0\prime) &lt; \text{deg}(p_0) \Rightarrow \Leftarrow$$
+Therefore, $\alpha_{m-1} \neq 0$, and we can by post-multiplication of $A^{-1}$ rearrange $p(A) = 0$ into
+$$\begin{align} A^{-1} = -\frac{1}{\alpha_{m-1}}\left(A^{m-1} + \alpha_1 A^{m-2} + \cdots + \alpha_{m-2} A^0\right)\\
+A^{-1}b = -\frac{1}{\alpha_{m-1}}\left(A^{m-1}b + \alpha_1 A^{m-2}b + \cdots + \alpha_{m-2}b\right)\end{align}$$
+This portrayal of $A^{-1}b$ directly proves $(1)$. Furthermore, we can also infer that the $m^{th}$-order Krylov subspace sufficiently contains $x$, for some $m = \text{deg}(p_0) \leq n$.
+<br><br>
+However, we briefly commented earlier that these spanning vectors of $\mathcal{K}$ are not particularly "nice," since they may converge toward the largest eigenvector by the properties of power iteration. While theoretically useful for proving $A^{-1}b \in \mathcal{K}$, practically we desire a more robust representation of $\mathcal{K}$, namely an orthonormal basis.
+<h2>Arnoldi Iteration</h2>
+To develop the Arnoldi iteration, consider building an orthonormal basis for $\mathcal{K}(A, b)$ using the classical Gram-Schmidt process:
+<br><br>
+Given $q_1, \dots, q_k$ orthonormal basis for columns $1 \to k$ on $\mathcal{K}(A,b)$, construct the next $q_{k+1}$ such that $\{q_1, q_2, \dots, q_{k+1}\}$ is an orthonormal basis for columns $1 \to k + 1$. By Gram-Schmidt orthogonalization:
+
+$$q_{k+1} =K_{k+1}^{(n)} - \sum_{i = 1}^k\text{proj}_{q_i}\left(K_{k+1}^{(n)}\right) = K_{k+1}^{(n)} - \sum_{i = 1}^k \left(q_i^T K_{k+1}^{(n)}\right) q_i \tag{2}$$
+
+where $K^{(n)}_i$ is the $i$th column of an $n$-order Krylov matrix. There are two numerical issues with this approach:
+<ol>
+        <li>$K_i^{(n)}$ may get unacceptably large for large $i$.</li>
+        <li>The algorithm is inherently unstable.</li>
+</ol>
+To solve the second issue, we can simply use the stabilized Gram-Schmidt process. For the first issue, we must reformulate $(2)$; specifically, we need to construct the normalized equivalent of $K_i^{(n)}$.
+<br><br>
+In order to build intuition, let's express orthonormal $q_1, q_2$, and $q_3$ without squaring $A$:
+
+$$q_1 = \alpha_1 b, \hspace{2mm} q_2 = \alpha_2 \left(Ab - (q_1^TAb)q_1\right) = \frac{\alpha_2}{\alpha_1}\left(Aq_1 - (q_1^TAq_1)q_1\right)$$ where $\alpha$ are normalizing constants. Now consider $q_3$ from $(2)$:
+
+$$\begin{align}q_3 &amp;= K_3 - q_1^T K_3 q_1 - q_2^T K_3 q_2\\
+&amp;= A^2b - (q_1^TA^2b) q_1 - (q_2^TA^2b)q_2 \tag{3}\end{align}$$
+then by definition of $q_1$ and $q_2$
+$$A^2b = \frac{1}{\alpha_1}A(Aq_1) = \frac{1}{\alpha_1}A\left(\frac{\alpha_1}{\alpha_2}q_2 + \left(q_1^T A q_1\right)q_1\right)$$ into $(3)$:
+$$\begin{align}q_3 &amp;= A^2b - (q_1^TA^2b) q_1 - (q_2^TA^2b)q_2\\
+&amp;= \cdots\\
+&amp;= Aq_2 - \left(q_1^T Aq_2\right)q_1 - \left(q_2^T Aq_2\right)q_2\end{align}$$
+
+where the normalizing constants have been omitted for brevity. Upon inspection, $Aq_k$ is the intuitive (and correct) choice to replace $K_{k+1}^{(n)}$. Such is the basis for a rigorous proof by induction, which is in the postscript. We can then rewrite $(2)$ as
+
+$$q_{k+1} = Aq_k - \sum_{i = 1}^k \left(q_i^T Aq_k\right) q_i \tag{4}$$
+
+Equivalently, $Aq_k = q_{k+1} + \sum_{i = 1}^k \left(q_i^T Aq_k\right) q_i$, which directly leads to a Hessenberg reduction $AQ_k=Q_{k+1}H_k$, a useful equality in deriving GMRES.
+<br><br>
+Our derivation is now complete: the stabilized version of $(4)$ (same as stabilizing Gram-Schmidt) is the Arnoldi iteration, which can be used to find eigenvalues and--in our case--to derive GMRES.
+<h2>GMRES</h2>
+GMRES is an iterative method that solves $Ax=b$, $A_{n\times n}$ non-singular, by iteratively finding an $x^* \in \mathcal{K}^{(i)}$ on each $i$th iteration such that $\Vert Ax^* - b \Vert_2$ is minimized. The core idea is to use Arnoldi iteration to generate a tractable basis for $\mathcal{K}^{(i)}$ and then solve the least-squares problem using QR factorization or a related method. By the $m$th iteration $x^*$ will have converged to $x$, where $m$ is the degree of the minimal polynomial associated with $A$, since $\mathcal{K}^{(m)}$ contains $x$ as proven earlier.
+<br><br>
+We begin by reformulating the least-squares problem:
+
+$$\begin{align*}\min_{x^*}\Vert Ax^* -b \Vert_2 &amp;= \min_{y^*}\Vert AQy^* -b \Vert_2\\
+&amp;= \min_{y^*}\Vert QHy^* -b \Vert_2\end{align*}$$
+A pre-multiplication by $Q^T$ has no effect since $Q$ orthogonal.
+$$\begin{align*}\min_{y^*}\Vert QHy^* -b \Vert_2 &amp;= \min_{y^*}\Vert Q^T QHy^*-Q^Tb \Vert_2\\
+&amp;= \min_{y^*}\Vert Hy^* -Q^Tb \Vert_2\end{align*}$$
+Since $Q_1 = \frac{b}{\Vert b \Vert}$ and $Q_k$ orthogonal to $b, k &gt; 1$,
+$$Q^Tb = \frac{b^T b}{\Vert b \Vert}e_1 = \Vert b \Vert e_1$$
+Thus, the final least-squares problem becomes
+$$\min_{y^*}\left|\left| Hy^* -\Vert b \Vert e_1 \right|\right|_2$$
+
+Of note is that $A$ doesn't necessarily have to be singular in order to obtain a good solution. Future discussion topics include convergence, stability, extension to non-singular matrices, and applications.
+<h3>Postscript</h3>
+<ul>
+        <li><a href="http://www.math.iit.edu/~fass/477577_Chapter_14.pdf">http://www.math.iit.edu/~fass/477577_Chapter_14.pdf</a></li>
+        <li><a href="http://meyer.math.ncsu.edu/Meyer/PS_Files/Krylov.pdf">http://meyer.math.ncsu.edu/Meyer/PS_Files/Krylov.pdf</a></li>
+        <li>(still typesetting proof in Arnoldi iteration section)</li>
+

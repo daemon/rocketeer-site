@@ -1,0 +1,19 @@
+---
+author: tetrisd
+title: D-separation in Bayesian Networks
+layout: post
+---
+In the topic of Bayesian networks, the concept of d-separation/d-connectedness is introduced to determine quickly conditional independence relations among nodes.<br>
+
+<img class="" src="https://i.imgur.com/TaYtdkG.png" alt="" width="643" height="242" />
+
+<em>Definition: </em>Let $A$ and $B$ be two nodes with evidence set $\textbf{E}$. An undirected path $(A, n_1, \dots, n_k, B)$ is said to be <em>blocked</em><em> </em>if and only if the following conditions hold for each node $n_i$ along the path:
+<ol>
+        <li>$n_i \in \textbf{E}$ and there are directed edges $n_{i-1} \rightarrow n_i \rightarrow n_{i+1}$</li>
+        <li>$n_i \in \textbf{E}$ and $n_{i-1} \leftarrow n_i \leftarrow n_{i+1}$</li>
+        <li>$n_i \in \textbf{E}$ and $n_{i-1} \leftarrow n_i \rightarrow n_{i+1}$</li>
+        <li>$n_i \notin \textbf{E}$ and $n_{i-1} \rightarrow n_i \leftarrow n_{i+1}$</li>
+</ol><br>
+Otherwise, the path is said to be <em>connected. </em>If all undirected paths between $A$ and $B$ are blocked, $A$ and $B$ are <em>d-separated. </em>Otherwise, $A$ and $B$ are <em>d-connected.</em>
+<br><br>
+<em>Theorem:</em> $A$ and $B$ are conditionally independent given $\textbf{E}$ if and only if they are d-separated.
