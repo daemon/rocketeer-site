@@ -4,11 +4,11 @@ title: "Introduction to AlphaGo"
 author: "tetrisd"
 ---
 Over the last twenty years, AI researchers have been developing new techniques to play such games as chess, backgammon, and checkers, eventually surpassing even the best humans. In 1992, TD-Gammon played backgammon at an expert level; four years later, Deep Blue defeated Garry Kasparov, one of the best chess players in the world. However, one game was still considered intractable for AI by early 2016: Go--due to its exceptionally large branching factor and difficulty in evaluating boards. That is, it was hard to explore Go's state space and even harder to determine the strength of a position, which would have allowed earlier termination of search. This intractability resulted in the best AI agents attaining only weak amateur play.
-
+<br><br>
 David Silver et al. proposed combining MCTS with deep convolutional neural networks that approximate two functions to aid in evaluation and exploration of Go's state space. These networks were respectively termed "value networks" and "policy networks." The former took in the board as input and output its desirability as an integer, while the latter had the same input and output probabilities of the opponent's moves.
-
-The policy network wasÂ trained in a particularly novel manner. It began with the insight that the utilityÂ of a board could be calculated well with no lookahead. With supervised learning alone, the network significantly outperformed previous move predictionÂ methods. The network was then trained with policy gradient reinforcement learning and, using no search at all, the networkÂ won 85% of games againstÂ the best Go program, Pachi.
-
-After training, policy and value networks were then used in MCTS; for each time step of the simulation, an action is chosen based on a formula thatÂ balances exploration and exploitation.Â The leaf nodes are then evaluated by combining the value network output and the outcome of a random game as predicted by the policy network. More precisely, the formula followed the form $V = (1 - \lambda)v + \lambda z$, where $\lambda$ is the mixing parameter.
-
+<br><br>
+The policy network was trained in a particularly novel manner. It began with the insight that the utility of a board could be calculated well with no lookahead. With supervised learning alone, the network significantly outperformed previous move prediction methods. The network was then trained with policy gradient reinforcement learning and, using no search at all, the network won 85% of games against the best Go program, Pachi.
+<br><br>
+After training, policy and value networks were then used in MCTS; for each time step of the simulation, an action is chosen based on a formula that balances exploration and exploitation. The leaf nodes are then evaluated by combining the value network output and the outcome of a random game as predicted by the policy network. More precisely, the formula followed the form $V = (1 - \lambda)v + \lambda z$, where $\lambda$ is the mixing parameter.
+<br><br>
 The solution was shockingly adept at playing Go. Against Fan Hui, a professional 2-dan player, it won eight out of ten games. More recently, AlphaGo defeated 9-dan Lee Sedol in a seminal 4-1 victory. These victories were especially significant since it had been thought that it would take a decade before computer programs could play Go professionally.

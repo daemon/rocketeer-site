@@ -1,7 +1,7 @@
 ---
 layout: post
 author: tetrisd
-title: BetaRank, A Method for Ranking Players
+title: BetaRank&#58; A Method for Ranking Players
 ---
 Rating systems like Elo and TrueSkill$^\text{TM}$ have been developed to assess the ranking of players in competitive games like chess and Xbox Live$^\text{TM}$, respectively. I've developed another such system, BetaRank, that endeavours to do the same, with the notable difference that the ranking statistic is intuitive and easy to understand. I describe the algorithm, examine its benefits and drawbacks, apply it to obtained data, and discuss the computational challenges.
 
@@ -25,7 +25,7 @@ In other words, we intuitively replace the quantity $\frac{k_{ij}}{k_{ij} + d_{i
 $$
 \begin{equation}r_{i} = \frac{1}{n}\sum^n_{\substack{j=1\\ j \neq i}}c_{ij}\label{rating-eq}\end{equation}
 $$ where $r_i$ is said to be the \textbf{rating} of $p_i$. In our contrived example, $r_1 = 0.57$ and $r_2 = 0.72$ for $\alpha = 0.25$, reflecting our belief that $p_2$ can probably outperform $p_1$.
-\newpage
+
 <h3>Updating rankings</h3>
 We have assumed a prior of $\text{BETA}(k, d)$ and we need to consider additional information $k'$ wins and $d'$ losses. Naturally, this additional information follows $\text{BIN}(k' + d', p)$ if we regard each match outcome as a coin flip.
 <br><br>
